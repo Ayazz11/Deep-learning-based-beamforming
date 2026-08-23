@@ -40,28 +40,27 @@ constant-modulus matrix.
 
 ## Loss Function: Concentrated MSE via KKT Elimination
 
-The network is trained to minimize sum communication MSE, but it does **not**
-output the digital precoder $\mathbf{F}_{\rm BB}$ directly. Instead:
+The network is trained to minimize sum communication MSE, but it does not output the digital precoder $\mathbf{F}_{\mathrm{BB}}$ directly. Instead:
 
-1. For a fixed $\mathbf{F}_{\rm RF}$, the per-user MSE with an MMSE receive
-   combiner has a known closed form,
-   $$\text{MSE}_k = 1 - \frac{|\mathbf{h}_k^H\mathbf{F}_{\rm RF}\mathbf{f}_{{\rm bb},k}|^2}{\sum_j |\mathbf{h}_k^H\mathbf{F}_{\rm RF}\mathbf{f}_{{\rm bb},j}|^2 + \sigma^2} = \frac{1}{1+\text{SINR}_k}$$
-2. Minimizing $\sum_k \text{MSE}_k$ subject to the transmit power constraint
-   over $\mathbf{F}_{\rm BB}$ (with $\mathbf{F}_{\rm RF}$ fixed) has a **closed-form
-   KKT stationary point** — a regularized zero-forcing–type solve in the
-   $N_{\rm RF}$-dimensional effective channel domain, computed via
-   `torch.linalg.solve` so it remains differentiable
-3. This closed-form $\mathbf{F}_{\rm BB}(\mathbf{F}_{\rm RF})$ is substituted
-   back into the MSE objective, **eliminating $\mathbf{F}_{\rm BB}$ as a free
-   variable** — hence *concentrated* MSE. The network only ever has to learn
-   $\mathbf{F}_{\rm RF}$; the digital stage is always the exact optimum for
-   whatever $\mathbf{F}_{\rm RF}$ the network currently proposes
+1. For a fixed $\mathbf{F}_{\mathrm{RF}}$, the per-user MSE with an MMSE receive combiner has a known closed form:
 
-This is a meaningful reduction in what the network has to learn: instead of
-searching a much larger joint $(\mathbf{F}_{\rm RF}, \mathbf{F}_{\rm BB})$
-space, gradient descent only has to solve the constant-modulus analog design
-problem, with the digital stage handled exactly by classical optimization at
-every training step and at inference time.
+   $$
+   \mathrm{MSE}_k =
+   1 -
+   \frac{
+   \left|\mathbf{h}_k^{H}\mathbf{F}_{\mathrm{RF}}\mathbf{F}_{\mathrm{BB},k}\right|^2
+   }{
+   \sum_j
+   \left|\mathbf{h}_k^{H}\mathbf{F}_{\mathrm{RF}}\mathbf{F}_{\mathrm{BB},j}\right|^2
+   + \sigma_k^2
+   }
+   $$
+
+2. Minimizing $\sum_k \mathrm{MSE}_k$ subject to the transmit power constraint over $\mathbf{F}_{\mathrm{BB}}$ (with $\mathbf{F}_{\mathrm{RF}}$ fixed) has a **closed-form KKT stationary point** — a regularized zero-forcing-type solution in the $N_{\mathrm{RF}}$-dimensional effective channel domain, computed via `torch.linalg.solve` so it remains differentiable.
+
+3. This closed-form $\mathbf{F}_{\mathrm{BB}}(\mathbf{F}_{\mathrm{RF}})$ is substituted back into the MSE objective, eliminating $\mathbf{F}_{\mathrm{BB}}$ as a free variable — hence **concentrated MSE**. The network only ever has to learn $\mathbf{F}_{\mathrm{RF}}$; the digital stage is always the exact optimum for whatever $\mathbf{F}_{\mathrm{RF}}$ the network currently proposes.
+
+This is a meaningful reduction in what the network has to learn. Instead of searching a much larger joint $(\mathbf{F}_{\mathrm{RF}}, \mathbf{F}_{\mathrm{BB}})$ space, gradient descent only has to solve the constant-modulus analog design problem, with the digital stage handled exactly by classical optimization at every training step and at inference time.
 
 ## Training Configuration
 
