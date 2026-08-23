@@ -1,8 +1,10 @@
-
-example 3 beam pattern details : 
-Sum rate         : 8.0726 bps/Hz
-General MSE      : 1.025916
-Concentrated MSE : 1.025916
-User angles (deg): [ 26.73 -25.88  50.65  62.44]
-User ranges (m)  : [40.18 50.51 78.06 38.54]
-Beam pattern peak at 50.72 deg
+Beam Pattern Details
+[Running] python -u "d:\MTECH\DL-communication only\tests\Inference_NN.py"
+[MultiuserAnalogPrecoderNet] M=128, K=4, N_RF=4, T=0mlp_dims=[512, 256, 128], params=989,824
+Sum rate         : 7.1715 bps/Hz
+General MSE      : 1.228842
+Concentrated MSE : 1.228843
+User angles (deg): [ 82.83   8.18  41.62 -31.24]
+User ranges (m)  : [29.59 79.12 49.43 79.43]
+Beam pattern peak at 8.20 deg
+Saved beam pattern plot to D:\MTECH\DL-communication only\Outputs_L1\beam_pattern_ex3.png

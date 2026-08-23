@@ -1,7 +1,6 @@
 
 #Near-field / far-field channel model
 import numpy as np
-import torch
 
 def array_response_near_field(theta: float, r: float, M: int, d: float, wavelength: float) -> np.ndarray:
     m_idx = np.arange(M)
