@@ -81,7 +81,7 @@ monotonic convergence (aside from a couple of small transient bumps around
 epoch 230–250, consistent with a scheduler LR-reduction step) and a clear
 plateau after ~400 epochs.
 
-![Sum rate vs epoch](sum_rate_vs_epoch_L1.png)
+![Sum rate vs epoch](Outputs/sum_rate_vs_epoch_L1.png)
 
 Training and validation sum rate rise together from ~2.3 bps/Hz to ~10
 bps/Hz. Training stays slightly above validation for most of training — a
@@ -115,7 +115,7 @@ goes further into the write-up.
 
 ### Beam Pattern
 
-![Example beam pattern](beam_pattern_ex3.png)
+![Example beam pattern](Outputs/beam_pattern_ex3.png)
 
 Example test case — user angles $[26.73°, -25.88°, 50.65°, 62.44°]$ at
 ranges $[40.18, 50.51, 78.06, 38.54]$ m, sum rate 8.0726 bps/Hz, MSE
@@ -127,5 +127,5 @@ user angles (main-lobe peak at 50.72°, matching the nearest user to within
 
 ## Inference Time: Neural Network vs. SOMP (Iterative Baseline)
 
-*To be completed — timing comparison against the SOMP iterative solver
-pending.*
+The inference time averaged over 500 realization for Nueral Network is 10.5867 ms/sample, and using the conventional SOMP technique : 704.1061 ms/sample.
+Here sample refers to one multi-user MIMO channel matrix H.
