@@ -74,7 +74,7 @@ trained for up to 500 epochs.
 
 ### Training Curves
 
-![Training loss vs epoch](loss_vs_epoch_L1.png)
+![Training loss vs epoch](\Outputsloss_vs_epoch_L1.png)
 
 Concentrated MSE loss falls from ~3.15 to ~0.80 over training, with smooth,
 monotonic convergence (aside from a couple of small transient bumps around
