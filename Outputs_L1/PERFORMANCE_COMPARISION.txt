@@ -1,0 +1,20 @@
+=============================================================================================================================
+Configuration                                 Avg Sum Rate (bps/Hz)         Avg MSE
+====================================================================================================
+1. Random F_RF + ZF F_BB                                    0.1340        3.909494 
+2. Random F_RF + Random F_BB                                0.3292        3.962596 
+3. Matched Filter F_RF + ZF F_BB                            8.8409        3.945541              -- 
+4. Matched Filter F_RF + Random F_BB                        1.4088        3.889155 
+5. Matched Filter F_RF + KKT F_BB                           9.9055        0.831573 
+6. Neural Network F_RF + KKT F_BB                           9.7057        0.862909 
+7. Full Digital F_RF + ZF F_BB                              9.9055        0.831573 
+8. SOMP F_RF + TH-HMP F_BB                                  9.7108        0.869293 
+====================================================================================================
+Average NN inference time (F_RF_nn + F_BB_nn): 10.5867 ms/sample
+Average SOMP inference time (F_RF_somp + F_BB_somp): 704.1061 ms/sample
+
+Highest Sum rate:
+  Full Digital F_RF + ZF F_BB --> 9.9055 bps/Hz
+
+Lowest MSE:
+  Full Digital F_RF + ZF F_BB --> 0.8316 bps/Hz

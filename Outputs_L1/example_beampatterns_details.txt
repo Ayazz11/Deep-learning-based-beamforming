@@ -1,0 +1,8 @@
+
+example 3 beam pattern details : 
+Sum rate         : 8.0726 bps/Hz
+General MSE      : 1.025916
+Concentrated MSE : 1.025916
+User angles (deg): [ 26.73 -25.88  50.65  62.44]
+User ranges (m)  : [40.18 50.51 78.06 38.54]
+Beam pattern peak at 50.72 deg
