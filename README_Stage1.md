@@ -1,6 +1,6 @@
-# Near-Field Deep-Unfolded Hybrid Beamforming — Stage 1 (Communication-Only)
+# Near-Field Deep Learning based Hybrid Beamforming — Stage 1 (Communication-Only)
 
-This stage trains a neural network to replace the analog (RF) precoder in a
+This stage trains a neural network to replace the conventional methods used for analog (RF) precoder in a
 hybrid beamforming system for a near-field, multi-user downlink. No sensing
 target or ISAC objective is included yet — this is the communication-only
 foundation the later ISAC stages build on.
@@ -9,15 +9,18 @@ foundation the later ISAC stages build on.
 
 - **M = 128** transmit antennas (uniform linear array), **N_RF = 4** RF chains
 - **K = 4** single-antenna downlink users
-- **100 GHz** carrier, half-wavelength element spacing
+- **100 GHz** carrier
+- half-wavelength element spacing
 - Near-field, LoS-dominant per-user channel model (each user has a single,
   fixed location $(\theta_k, r_k)$ relative to the array), users placed
-  between 5 m and 80 m from the array — well within the array's near-field
-  (Rayleigh distance) region, so the spherical-wavefront channel model is
+  between 5 m and 80 m from the array , The range covers both near and far field region. With the near field boundary R=25m. so the spherical-wavefront channel model is
   used throughout rather than the far-field plane-wave approximation
-- Hybrid transmit signal: $\mathbf{x} = \mathbf{F}_{\rm RF}\mathbf{F}_{\rm BB}\mathbf{s}$,
-  with $\mathbf{F}_{\rm RF}$ constrained to constant-modulus (phase-shifter)
-  entries and total transmit power constrained to $P_t$
+- Hybrid transmit signal: 
+  $$
+\mathbf{x} = \mathbf{F}_{\mathrm{RF}}\mathbf{F}_{\mathrm{BB}}\mathbf{s}
+$$
+constrained to constant-modulus (phase-shifter)
+entries and total transmit power constrained to $P_t$
 
 ## Neural Network Architecture
 
