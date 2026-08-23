@@ -116,7 +116,7 @@ goes further into the write-up.
 
 ![Example beam pattern](Outputs/beam_pattern_ex3.png)
 
-Example test case — user angles $[26.73°, -25.88°, 50.65°, 62.44°]$ at
+Example test case — user angles $[29.59 79.12 49.43 79.43]$ at
 ranges $[40.18, 50.51, 78.06, 38.54]$ m, sum rate 8.0726 bps/Hz, MSE
 1.0259 (general and concentrated MSE agree exactly, confirming the KKT
 closed form is being evaluated consistently). The far-field angular cut of
