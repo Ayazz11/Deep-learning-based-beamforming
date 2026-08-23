@@ -1,6 +1,6 @@
-# Near-Field Deep-Unfolded Hybrid Beamforming — Stage 1 (Communication-Only)
+# Near-Field Deep Learning based Hybrid Beamforming — Stage 1 (Communication-Only)
 
-This stage trains a neural network to replace the analog (RF) precoder in a
+This stage trains a neural network to replace the conventional methods used for analog (RF) precoder in a
 hybrid beamforming system for a near-field, multi-user downlink. No sensing
 target or ISAC objective is included yet — this is the communication-only
 foundation the later ISAC stages build on.
@@ -9,15 +9,18 @@ foundation the later ISAC stages build on.
 
 - **M = 128** transmit antennas (uniform linear array), **N_RF = 4** RF chains
 - **K = 4** single-antenna downlink users
-- **100 GHz** carrier, half-wavelength element spacing
+- **100 GHz** carrier
+- half-wavelength element spacing
 - Near-field, LoS-dominant per-user channel model (each user has a single,
   fixed location $(\theta_k, r_k)$ relative to the array), users placed
-  between 5 m and 80 m from the array — well within the array's near-field
-  (Rayleigh distance) region, so the spherical-wavefront channel model is
+  between 5 m and 80 m from the array , The range covers both near and far field region. With the near field boundary R=25m. so the spherical-wavefront channel model is
   used throughout rather than the far-field plane-wave approximation
-- Hybrid transmit signal: $\mathbf{x} = \mathbf{F}_{\rm RF}\mathbf{F}_{\rm BB}\mathbf{s}$,
-  with $\mathbf{F}_{\rm RF}$ constrained to constant-modulus (phase-shifter)
-  entries and total transmit power constrained to $P_t$
+- Hybrid transmit signal: 
+  $$
+\mathbf{x} = \mathbf{F}_{\mathrm{RF}}\mathbf{F}_{\mathrm{BB}}\mathbf{s}
+$$
+constrained to constant-modulus (phase-shifter)
+entries and total transmit power constrained to $P_t$
 
 ## Neural Network Architecture
 
@@ -37,28 +40,27 @@ constant-modulus matrix.
 
 ## Loss Function: Concentrated MSE via KKT Elimination
 
-The network is trained to minimize sum communication MSE, but it does **not**
-output the digital precoder $\mathbf{F}_{\rm BB}$ directly. Instead:
+The network is trained to minimize sum communication MSE, but it does not output the digital precoder $\mathbf{F}_{\mathrm{BB}}$ directly. Instead:
 
-1. For a fixed $\mathbf{F}_{\rm RF}$, the per-user MSE with an MMSE receive
-   combiner has a known closed form,
-   $$\text{MSE}_k = 1 - \frac{|\mathbf{h}_k^H\mathbf{F}_{\rm RF}\mathbf{f}_{{\rm bb},k}|^2}{\sum_j |\mathbf{h}_k^H\mathbf{F}_{\rm RF}\mathbf{f}_{{\rm bb},j}|^2 + \sigma^2} = \frac{1}{1+\text{SINR}_k}$$
-2. Minimizing $\sum_k \text{MSE}_k$ subject to the transmit power constraint
-   over $\mathbf{F}_{\rm BB}$ (with $\mathbf{F}_{\rm RF}$ fixed) has a **closed-form
-   KKT stationary point** — a regularized zero-forcing–type solve in the
-   $N_{\rm RF}$-dimensional effective channel domain, computed via
-   `torch.linalg.solve` so it remains differentiable
-3. This closed-form $\mathbf{F}_{\rm BB}(\mathbf{F}_{\rm RF})$ is substituted
-   back into the MSE objective, **eliminating $\mathbf{F}_{\rm BB}$ as a free
-   variable** — hence *concentrated* MSE. The network only ever has to learn
-   $\mathbf{F}_{\rm RF}$; the digital stage is always the exact optimum for
-   whatever $\mathbf{F}_{\rm RF}$ the network currently proposes
+1. For a fixed $\mathbf{F}_{\mathrm{RF}}$, the per-user MSE with an MMSE receive combiner has a known closed form:
 
-This is a meaningful reduction in what the network has to learn: instead of
-searching a much larger joint $(\mathbf{F}_{\rm RF}, \mathbf{F}_{\rm BB})$
-space, gradient descent only has to solve the constant-modulus analog design
-problem, with the digital stage handled exactly by classical optimization at
-every training step and at inference time.
+   $$
+   \mathrm{MSE}_k =
+   1 -
+   \frac{
+   \left|\mathbf{h}_k^{H}\mathbf{F}_{\mathrm{RF}}\mathbf{F}_{\mathrm{BB},k}\right|^2
+   }{
+   \sum_j
+   \left|\mathbf{h}_k^{H}\mathbf{F}_{\mathrm{RF}}\mathbf{F}_{\mathrm{BB},j}\right|^2
+   + \sigma_k^2
+   }
+   $$
+
+2. Minimizing $\sum_k \mathrm{MSE}_k$ subject to the transmit power constraint over $\mathbf{F}_{\mathrm{BB}}$ (with $\mathbf{F}_{\mathrm{RF}}$ fixed) has a **closed-form KKT stationary point** — a regularized zero-forcing-type solution in the $N_{\mathrm{RF}}$-dimensional effective channel domain, computed via `torch.linalg.solve` so it remains differentiable.
+
+3. This closed-form $\mathbf{F}_{\mathrm{BB}}(\mathbf{F}_{\mathrm{RF}})$ is substituted back into the MSE objective, eliminating $\mathbf{F}_{\mathrm{BB}}$ as a free variable — hence **concentrated MSE**. The network only ever has to learn $\mathbf{F}_{\mathrm{RF}}$; the digital stage is always the exact optimum for whatever $\mathbf{F}_{\mathrm{RF}}$ the network currently proposes.
+
+This is a meaningful reduction in what the network has to learn. Instead of searching a much larger joint $(\mathbf{F}_{\mathrm{RF}}, \mathbf{F}_{\mathrm{BB}})$ space, gradient descent only has to solve the constant-modulus analog design problem, with the digital stage handled exactly by classical optimization at every training step and at inference time.
 
 ## Training Configuration
 
@@ -71,14 +73,14 @@ trained for up to 500 epochs.
 
 ### Training Curves
 
-![Training loss vs epoch](loss_vs_epoch_L1.png)
+![Training loss vs epoch](Outputs/loss_vs_epoch_L1.png)
 
 Concentrated MSE loss falls from ~3.15 to ~0.80 over training, with smooth,
 monotonic convergence (aside from a couple of small transient bumps around
 epoch 230–250, consistent with a scheduler LR-reduction step) and a clear
 plateau after ~400 epochs.
 
-![Sum rate vs epoch](sum_rate_vs_epoch_L1.png)
+![Sum rate vs epoch](Outputs/sum_rate_vs_epoch_L1.png)
 
 Training and validation sum rate rise together from ~2.3 bps/Hz to ~10
 bps/Hz. Training stays slightly above validation for most of training — a
@@ -112,7 +114,7 @@ goes further into the write-up.
 
 ### Beam Pattern
 
-![Example beam pattern](beam_pattern_ex3.png)
+![Example beam pattern](Outputs/beam_pattern_ex3.png)
 
 Example test case — user angles $[26.73°, -25.88°, 50.65°, 62.44°]$ at
 ranges $[40.18, 50.51, 78.06, 38.54]$ m, sum rate 8.0726 bps/Hz, MSE
@@ -124,5 +126,5 @@ user angles (main-lobe peak at 50.72°, matching the nearest user to within
 
 ## Inference Time: Neural Network vs. SOMP (Iterative Baseline)
 
-*To be completed — timing comparison against the SOMP iterative solver
-pending.*
+The inference time averaged over 500 realization for Nueral Network is 10.5867 ms/sample, and using the conventional SOMP technique : 704.1061 ms/sample.
+Here sample refers to one multi-user MIMO channel matrix H.
