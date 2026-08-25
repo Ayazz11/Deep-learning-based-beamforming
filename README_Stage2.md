@@ -98,7 +98,7 @@ surface.
 
 ### Training Curves
 
-![Communication loss vs epoch](Figure_4.png)
+![Communication loss vs epoch](\Outputs\ISAC Outputs\Figure_4.png)
 
 $L_{\rm com}^{\rm norm}$ falls from ~1.17 to a floor around **0.19–0.20**,
 with a transient bump around epoch 200–250 (likely the sensing gradient
@@ -109,13 +109,13 @@ communication performance close to its Stage 1 ceiling even while jointly
 optimizing for sensing**, which is the result you'd want to see at
 $\lambda=0.5$.
 
-![Sensing loss vs epoch](Figure_3.png)
+![Sensing loss vs epoch](Outputs\ISAC Outputs\Figure_3.png)
 
 $L_{\rm sen}$ decreases steadily and smoothly from near 0 to about $-0.26$,
 converging by roughly epoch 800–1000 — target illumination power is
 climbing throughout training with no instability.
 
-![Combined training loss vs epoch](Figure_1.png)
+![Combined training loss vs epoch](Outputs\ISAC Outputs\Figure_1.png)
 
 The combined loss $\mathcal{L}$ goes negative as it converges (~$-0.105$) —
 expected, since $L_{\rm sen}^{\rm norm}$ is negative by construction and
@@ -124,7 +124,7 @@ comes to dominate the sum as sensing improves. Note the y-axis label
 plotting code and no longer describes what's actually plotted here (the
 combined ISAC loss) — worth relabeling before this goes in the paper.
 
-![Sum rate vs epoch](Figure_2.png)
+![Sum rate vs epoch](\Outputs\ISAC Outputs\Figure_2.png)
 
 Training sum rate rises quickly to ~18.8 bps/Hz before settling to ~17.7–17.8;
 validation climbs much more slowly, only catching up around epoch 600–700,
@@ -144,7 +144,7 @@ the two stages' sum-rate numbers aren't read as directly comparable.
 
 ### Beam Patterns
 
-![1-D far-field beam pattern cut](Figure_5.png)
+![1-D far-field beam pattern cut](\Outputs\ISAC Outputs\Figure_5.png)
 
 This is the same 1-D angular-cut plot (and the same underlying jagged
 sidelobe floor) we diagnosed earlier: probing a near-field-focused precoder
@@ -154,7 +154,7 @@ sharp peaks are real and roughly angle-aligned, but the noisy floor between
 them isn't a meaningful sidelobe structure — treat this figure as a rough
 sanity check only, not the primary sensing diagnostic.
 
-![2-D near-field beampattern](Figure_6.png)
+![2-D near-field beampattern](\Outputs\ISAC Outputs\Figure_6.png)
 
 This is the right visualization for a near-field system, and a good
 addition — power plotted jointly over angle **and** range, with the
