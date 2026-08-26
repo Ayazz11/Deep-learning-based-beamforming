@@ -27,11 +27,13 @@ The selected range includes both near-field and far-field users.
 A spherical-wave channel model is used for all users instead of the far-field plane-wave approximation.
 
 The transmitted signal is
-
-* $\mathbf{x}$=
-* $\mathbf{F}_{\mathrm{RF}}$
-* $\mathbf{F}_{\mathrm{BB}}$
-* $\mathbf{s}$
+\[
+\mathbf{x}
+=
+\mathbf{F}_{\mathrm{RF}}
+\mathbf{F}_{\mathrm{BB}}
+\mathbf{s}
+\]
 
 where:
 
