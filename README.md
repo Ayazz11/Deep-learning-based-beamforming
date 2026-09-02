@@ -219,7 +219,7 @@ The following results are obtained by averaging over the test set.
 | Matched Filter $\mathbf{F}*{\rm RF}$ + KKT $\mathbf{F}*{\rm BB}$     |               10.0851 |     0.8190 |
 | **Neural Network $\mathbf{F}*{\rm RF}$ + KKT $\mathbf{F}*{\rm BB}$** |            **9.9044** | **0.8469** |
 | Full Digital $\mathbf{F}*{\rm RF}$ + ZF $\mathbf{F}*{\rm BB}$        |               10.0851 |     0.8190 |
-| SOMP $\mathbf{F}*{\rm RF}$ + TH-HMP $\mathbf{F}*{\rm BB}$            |                8.2772 |     1.3294 |
+| SOMP $\mathbf{F}*{\rm RF}$                                           |                8.2772 |     1.3294 |
 
 The neural network achieves an average sum rate of:
 
@@ -246,8 +246,6 @@ This shows that the trained network can obtain a good RF precoder without runnin
 ### Note
 
 The Matched Filter + KKT and Full Digital + ZF configurations give exactly the same values in the current implementation.
-
-This should be checked further to determine whether this is a property of the current system setup (`N_RF = K = 4`) or whether both cases are sharing part of the evaluation code.
 
 ---
 
