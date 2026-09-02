@@ -1,6 +1,6 @@
-# Near-Field Deep Learning Based Hybrid Beamforming.
+# Deep Learning Based Hybrid Beamforming.
 
-This project is the first stage of a near-field hybrid beamforming system for multi-user communication.
+This project is the first stage of a  hybrid beamforming system for multi-user communication.
 
 The objective is to use a neural network to design the analog (RF) precoder instead of using conventional iterative methods. The digital (baseband) precoder is calculated separately using a KKT-based solution.
 
