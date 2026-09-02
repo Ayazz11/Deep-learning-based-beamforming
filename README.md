@@ -85,11 +85,9 @@ The final `CMNormalization` layer converts the network output into a constant-mo
 
 Each element satisfies
 
-$$
-\left|[\mathbf{F}_{\mathrm{RF}}]_{m,n}\right|
+$$\left|[\mathbf{F}_{\mathrm{RF}}]_{m,n}\right|$$
 =
-\frac{1}{\sqrt{M}}.
-$$
+$$\frac{1}{\sqrt{M}}.$$
 
 Therefore, the output of the network already satisfies the RF phase-shifter constraint.
 
