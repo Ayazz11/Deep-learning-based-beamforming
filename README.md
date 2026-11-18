@@ -208,38 +208,57 @@ The two curves become close to each other near the end of training, showing that
 
 The following results are obtained by averaging over the test set.
 
-| Configuration                                                        | Avg Sum Rate (bps/Hz) |    Avg MSE |
-| -------------------------------------------------------------------- | --------------------: | ---------: |
-| Random $\mathbf{F}*{\rm RF}$ + ZF $\mathbf{F}*{\rm BB}$              |                0.1466 |     3.9019 |
-| Random $\mathbf{F}*{\rm RF}$ + Random $\mathbf{F}*{\rm BB}$          |                0.3304 |     3.9675 |
-| Matched Filter $\mathbf{F}*{\rm RF}$ + ZF $\mathbf{F}*{\rm BB}$      |                9.0242 |     3.9497 |
-| Matched Filter $\mathbf{F}*{\rm RF}$ + Random $\mathbf{F}*{\rm BB}$  |                1.4009 |     3.8805 |
-| Matched Filter $\mathbf{F}*{\rm RF}$ + KKT $\mathbf{F}*{\rm BB}$     |               10.0851 |     0.8190 |
-| **Neural Network $\mathbf{F}*{\rm RF}$ + KKT $\mathbf{F}*{\rm BB}$** |            **9.9044** | **0.8469** |
-| Full Digital $\mathbf{F}*{\rm RF}$ + ZF $\mathbf{F}*{\rm BB}$        |               10.0851 |     0.8190 |
-| SOMP $\mathbf{F}*{\rm RF}$                                           |                8.2772 |     1.3294 |
+| Configuration | Avg Sum Rate (bps/Hz) | Avg MSE |
+|:---|---:|---:|
+| Random $\mathbf{F}_{\mathrm{RF}}$ + ZF $\mathbf{F}_{\mathrm{BB}}$ | 0.1466 | 3.9019 |
+| Random $\mathbf{F}_{\mathrm{RF}}$ + Random $\mathbf{F}_{\mathrm{BB}}$ | 0.3304 | 3.9675 |
+| Matched Filter $\mathbf{F}_{\mathrm{RF}}$ + ZF $\mathbf{F}_{\mathrm{BB}}$ | 9.0242 | 3.9497 |
+| Matched Filter $\mathbf{F}_{\mathrm{RF}}$ + Random $\mathbf{F}_{\mathrm{BB}}$ | 1.4009 | 3.8805 |
+| Matched Filter $\mathbf{F}_{\mathrm{RF}}$ + KKT $\mathbf{F}_{\mathrm{BB}}$ | 10.0851 | 0.8190 |
+| **Neural Network $\mathbf{F}_{\mathrm{RF}}$ + KKT $\mathbf{F}_{\mathrm{BB}}$** | **9.9044** | **0.8469** |
+| Full Digital $\mathbf{F}_{\mathrm{RF}}$ + ZF $\mathbf{F}_{\mathrm{BB}}$ | 10.0851 | 0.8190 |
+| SOMP $\mathbf{F}_{\mathrm{RF}}$ | 8.2772 | 1.3294 |
 
-The neural network achieves an average sum rate of:
+### Key Observations
 
-$$
-\boxed{9.9044\ \text{bps/Hz}}
-$$
+**1. Neural Network Performance**
 
-The best result in the table is:
+The proposed neural network achieves an average sum rate of:
 
 $$
-10.0851\ \text{bps/Hz}
+\boxed{R_{\mathrm{NN}} = 9.9044 \ \text{bps/Hz}}
 $$
 
-Therefore, the neural network is approximately `1.8%` below the best result.
+**2. Comparison with the Best Result**
 
-It also performs better than the SOMP + TH-HMP method:
+The best sum rate in the table is:
 
 $$
-9.9044 > 8.2772\ \text{bps/Hz}.
+R_{\mathrm{best}} = 10.0851 \ \text{bps/Hz}
 $$
 
-This shows that the trained network can obtain a good RF precoder without running the iterative SOMP procedure for every channel realization.
+The relative performance gap is:
+
+$$
+\text{Gap} =
+\frac{R_{\mathrm{best}}-R_{\mathrm{NN}}}
+{R_{\mathrm{best}}}\times 100
+\approx 1.8\%
+$$
+
+Thus, the neural network achieves a sum rate within approximately 1.8% of the best result.
+
+**3. Comparison with SOMP**
+
+The proposed neural network also outperforms the SOMP-based approach:
+
+$$
+9.9044 > 8.2772 \ \text{bps/Hz}
+$$
+
+**Conclusion**
+
+These results demonstrate that the trained neural network can predict an effective analog RF precoder without requiring iterative SOMP execution for every channel realization, while achieving performance close to the best benchmark in terms of average sum rate.
 
 ### Note
 
