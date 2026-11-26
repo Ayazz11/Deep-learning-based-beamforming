@@ -34,7 +34,7 @@ $$
 \mathbf{x} = \mathbf{F}_{\mathrm{RF}}\,\mathbf{F}_{\mathrm{BB}}\,\mathbf{s},
 $$
 
-where $\mathbf{F}_{\mathrm{RF}} \in \mathbb{C}^{M\times N_{\mathrm{RF}}}$ is the analog precoder, $\mathbf{F}_{\mathrm{BB}} \in \mathbb{C}^{N_{\mathrm{RF}}\times K}$ is the digital precoder and $\mathbf{s}$ carries the K data streams. The analog precoder models phase shifters, so every entry has constant modulus $1/\sqrt{M}$. The total power is limited by $\|\mathbf{F}_{\mathrm{RF}}\mathbf{F}_{\mathrm{BB}}\|_F^2 \le P_t$.
+where `F_RF` ∈ ℂ^(M×N_RF) is the analog precoder, `F_BB` ∈ ℂ^(N_RF×K) is the digital precoder and `s` carries the K data streams. The analog precoder models phase shifters, so every entry has constant modulus 1/√M. The total power is limited by ‖`F_RF F_BB`‖² ≤ P_t.
 
 ### 1.2 Channel model used in Stage 1 (single-path LoS)
 
@@ -54,9 +54,9 @@ $$
 
 ## 2. Neural network
 
-`MultiuserAnalogPrecoderNet` takes the channel matrix $\mathbf{H}\in\mathbb{C}^{M\times K}$ and outputs the analog precoder $\mathbf{F}_{\mathrm{RF}}$.
+`MultiuserAnalogPrecoderNet` takes the channel matrix `H` ∈ ℂ^(M×K) and outputs the analog precoder `F_RF`.
 
-A shared per-user complex MLP processes each user's channel vector. Its hidden layers have sizes 512 → 256 → 128, and each block is `ComplexLinear` → `ComplexBatchNorm` → `ComplexTanh`. The K user features are concatenated, passed through a merge layer that outputs M·N_RF complex values, and reshaped to M × N_RF. A final `CMNormalization` layer divides each entry by its magnitude and scales by $1/\sqrt{M}$:
+A shared per-user complex MLP processes each user's channel vector. Its hidden layers have sizes 512 → 256 → 128, and each block is `ComplexLinear` → `ComplexBatchNorm` → `ComplexTanh`. The K user features are concatenated, passed through a merge layer that outputs M·N_RF complex values, and reshaped to M × N_RF. A final `CMNormalization` layer divides each entry by its magnitude and scales by 1/√M:
 
 $$
 \left|[\mathbf{F}_{\mathrm{RF}}]_{m,n}\right| = \frac{1}{\sqrt{M}}.
@@ -68,13 +68,13 @@ The output therefore always satisfies the phase-shifter constraint, and the netw
 
 ## 3. Digital precoder (KKT)
 
-The network does not predict $\mathbf{F}_{\mathrm{BB}}$. For a given $\mathbf{F}_{\mathrm{RF}}$, the digital precoder minimizes the sum MSE under the power constraint. For user k, the MSE with optimal scaling is
+The network does not predict `F_BB`. For a given `F_RF`, the digital precoder minimizes the sum MSE under the power constraint. For user k, the MSE with optimal scaling is
 
 $$
 \mathrm{MSE}_k = 1 - \frac{|\mathbf{h}_k^H \mathbf{F}_{\mathrm{RF}} \mathbf{f}_{\mathrm{BB},k}|^2}{\sum_j |\mathbf{h}_k^H \mathbf{F}_{\mathrm{RF}} \mathbf{f}_{\mathrm{BB},j}|^2 + \sigma^2}.
 $$
 
-For fixed $\mathbf{F}_{\mathrm{RF}}$ the problem is convex with one active power constraint, and the KKT conditions give a closed form:
+For fixed `F_RF` the problem is convex with one active power constraint, and the KKT conditions give a closed form:
 
 $$
 \tilde{\mathbf{F}}_{\mathrm{BB}} = \big(\mathbf{F}_{\mathrm{RF}}^H\mathbf{H}\mathbf{H}^H\mathbf{F}_{\mathrm{RF}} + \tfrac{K\sigma^2}{P_t}\,\mathbf{F}_{\mathrm{RF}}^H\mathbf{F}_{\mathrm{RF}}\big)^{-1}\mathbf{F}_{\mathrm{RF}}^H\mathbf{H},
@@ -90,7 +90,7 @@ It is implemented with `torch.linalg.solve` (plus a small ridge for stability), 
 
 ## 4. Concentrated MSE
 
-Because $\mathbf{F}_{\mathrm{BB}}$ is available in closed form for any $\mathbf{F}_{\mathrm{RF}}$, it does not need to be learned. Substituting it back into the MSE leaves a loss that depends only on the analog precoder:
+Because `F_BB` is available in closed form for any `F_RF`, it does not need to be learned. Substituting it back into the MSE leaves a loss that depends only on the analog precoder:
 
 $$
 E(\mathbf{F}_{\mathrm{RF}}) = \mathrm{tr}\!\left[\left(\mathbf{I}_K + \frac{P_t}{K\sigma^2}\,\mathbf{H}^H\mathbf{F}_{\mathrm{RF}}(\mathbf{F}_{\mathrm{RF}}^H\mathbf{F}_{\mathrm{RF}})^{-1}\mathbf{F}_{\mathrm{RF}}^H\mathbf{H}\right)^{-1}\right].
@@ -98,9 +98,9 @@ $$
 
 During training:
 
-1. The channel $\mathbf{H}$ goes into the network.
-2. The network outputs $\mathbf{F}_{\mathrm{RF}}$.
-3. The loss $E(\mathbf{F}_{\mathrm{RF}})$ is evaluated directly, which uses the KKT digital precoder implicitly.
+1. The channel `H` goes into the network.
+2. The network outputs `F_RF`.
+3. The loss `E(F_RF)` is evaluated directly, which uses the KKT digital precoder implicitly.
 4. The loss is backpropagated through the whole calculation. No labels are needed.
 
 This is the **concentrated MSE**. It leaves the network with a smaller problem than learning both precoders, and for every analog precoder the network produces, the digital precoder is exactly optimal.
@@ -177,7 +177,7 @@ Measured per sample (one multi-user channel matrix) and averaged over 500 channe
 
 The network is about **66× faster**. SOMP runs a greedy search for every channel, whereas the network needs a single forward pass.
 
-### 6.6 Summary of part 1
+### 6.6 Summary of Stage 1
 
 - The network generates a constant-modulus RF precoder directly from the channel, and the output satisfies the phase-shifter constraint by construction.
 - The digital precoder is computed in closed form, so the network only learns the RF precoder.
@@ -207,7 +207,7 @@ Because this channel has no path loss and several paths per user, the Stage 2 su
 
 ### 7.2 Method
 
-**Sensing model.** Targets are one-way receivers with unit-norm near-field steering vectors $\mathbf{B} = [\mathbf{b}(\theta_t, r_t)] \in \mathbb{C}^{M\times T}$ (`target_model.py`). The power received at target t is
+**Sensing model.** Targets are one-way receivers with unit-norm near-field steering vectors `B = [b(θ_t, r_t)]` ∈ ℂ^(M×T) (`target_model.py`). The power received at target t is
 
 $$
 G_t = \|\mathbf{b}_t^H\mathbf{F}_{\mathrm{RF}}\mathbf{F}_{\mathrm{BB}}\|^2,
@@ -215,7 +215,7 @@ $$
 
 a transmit-side quantity with no array gain, round-trip loss or RCS. It is reported as a fraction of the transmit power P_t = 1 W.
 
-**Digital precoder.** $\mathbf{F}_{\mathrm{BB}}$ stays the communication-optimal KKT closed form from Section 3, so it needs no extra training.
+**Digital precoder.** `F_BB` stays the communication-optimal KKT closed form from Section 3, so it needs no extra training.
 
 **Loss** (`loss.py::isac_loss`):
 
@@ -310,4 +310,3 @@ The values below are read off the plots, so they are approximate.
 **Generalization gap.** The training sum rate (17.77) is 2.46 bps/Hz above validation (15.31), or 13.8% of the training value. The sensing gap is only 1.5% (0.2568 vs 0.2530), so the overfitting is in the communication part. In the communication-only run the training and validation curves coincide at about 30.3 bps/Hz.
 
 **Loss-to-rate sanity check.** If all users had the same SINR, with MSE = 1/(1 + SINR), then E_c = 0.1914 would correspond to about 17.5 bps/Hz (measured training rate 17.77), and the communication-only E_c ≈ 0.0227 would correspond to about 29.8 bps/Hz (measured about 30.3). The loss and the rate tell the same story.
-
