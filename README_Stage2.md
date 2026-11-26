@@ -1,485 +1,107 @@
-# Deep Learning Hybrid Beamforming — Stage 2 (ISAC Extension)
+## ISAC Extension: Joint Communication and Target Illumination
 
-Stage 2 extends the Stage 1 communication-only system to joint communication and sensing (ISAC).
+The analog-precoder network is extended so that the same constant-modulus precoder serves K downlink users and illuminates T targets. No dedicated sensing beams or extra RF chains are used. Only the communication symbols are transmitted, and the analog precoder shapes where that energy goes.
 
-The same neural network used for the analog precoder in Stage 1 is now used to serve the communication users and also focus power toward near-field sensing targets.
+### Method
 
-The system parameters such as the number of antennas, RF chains, carrier frequency, and antenna spacing remain the same as Stage 1.
+**Sensing model.** Targets are one-way receivers with unit-norm near-field steering vectors `B = [b(θ_t, r_t)] ∈ C^{M×T}` (`target_model.py`). The power at target *t* is `P_t = ||b_tᴴ F_RF F_BB||²`, which is a transmit-side quantity and does not include array gain, round-trip loss or RCS. `P_t` is expressed as a fraction of the transmit power (P_tx = 1 W).
 
----
+**Digital precoder.** `F_BB` stays the communication-optimal KKT closed form (`kkt_precoder.py`), so the digital stage needs no extra training.
 
-## 1. What is Changed from Stage 1?
+**Loss** (`loss.py::isac_loss`):
 
-|                 | Stage 1                         | Stage 2                                                           |
-| --------------- | ------------------------------- | ----------------------------------------------------------------- |
-| Input           | $\mathbf{H}$ only ($M\times K$) | $\mathbf{H}_{\rm aug}=[\mathbf{H},|,\mathbf{B}]$ ($M\times(K+L)$) |
-| Targets         | None                            | $L=3$ near-field sensing targets                                  |
-| Network columns | $K=4$                           | $K+L=7$                                                           |
-| Merge layer     | ComplexLinear(512→512)          | ComplexLinear(896→512)                                            |
-| Loss            | Communication loss only         | $\lambda L_{\rm com}+(1-\lambda)L_{\rm sen}$                      |
-
-The main change is that the network now receives information about both the communication users and the sensing targets.
-
----
-
-## 2. Sensing Targets
-
-Three fixed sensing targets are used in this stage.
-
-| Target |       Angle | Range |
-| ------ | ----------: | ----: |
-| 1      |   $0^\circ$ |  15 m |
-| 2      |  $30^\circ$ |  25 m |
-| 3      | $-20^\circ$ |  40 m |
-
-The targets remain fixed for all training samples. The communication channel $\mathbf{H}$ changes from one sample to another.
-
-For each target, a near-field array response vector is calculated as
-
-$$
-\mathbf{b}_\ell
-=
-\mathbf{a}_{\rm nf}(\theta_\ell,r_\ell).
-$$
-
-The same near-field array response used in the channel model is used for the sensing targets.
-
-For this system, the Rayleigh distance is approximately `24.2 m`.
-
-Therefore:
-
-* Target 1 at `15 m` is inside the near-field region.
-* Target 2 at `25 m` is just outside the near-field boundary.
-* Target 3 at `40 m` is in the far-field region.
-
-This allows the system to include targets on both sides of the near-field boundary.
-
----
-
-## 3. Input to the Network
-
-In Stage 1, the network only received the communication channel:
-
-$$
-\mathbf{H}\in\mathbb{C}^{M\times K}.
-$$
-
-In Stage 2, the target steering vectors are added to the input.
-
-Let
-
-$$
-\mathbf{B}
-=
-[\mathbf{b}_1,\mathbf{b}_2,\mathbf{b}_3].
-$$
-
-The communication channel and target matrix are concatenated column-wise:
-
-$$
-\mathbf{H}_{\rm aug}
-=
-[\mathbf{H}\,\|\,\mathbf{B}].
-$$
-
-Since there are `K = 4` users and `L = 3` targets,
-
-$$
-\mathbf{H}_{\rm aug}
-\in
-\mathbb{C}^{M\times7}.
-$$
-
-The network therefore processes seven input columns: four communication channels and three target steering vectors.
-
----
-
-## 4. Network Architecture
-
-The main network structure from Stage 1 is kept unchanged.
-
-Each input column is processed using the same ComplexMLP:
-
-```text
-128 → 512 → 256 → 128
+```
+L = λ · E_c(F_RF) / K  +  (1 − λ) · L_sen / P_tx
+E_c(F_RF) = tr[(I + P_tx/(Kσ²) · Hᴴ F_RF (F_RFᴴ F_RF)⁻¹ F_RFᴴ H)⁻¹]      (concentrated MSE)
+L_sen     = −(1/T) · Σ_t ||b_tᴴ F_RF F_BB||²                            (F_BB detached)
 ```
 
-The layers used are:
+The run reported below uses **λ = 0.5**. This follows from the logged values: 0.5·(0.1915/4) + 0.5·(−0.2567) = −0.1044.
 
-* `ComplexLinear`
-* `ComplexBatchNorm`
-* `ComplexTanh`
+**Network change.** The target steering vectors are appended to the per-user inputs, so the shared complex MLP sees K+T = 7 columns. The merge layer input grows from 4·128 to 7·128. By my count this gives about 1.38 M real parameters (about 0.99 M for the communication-only model). The model constructor prints the exact figure.
 
-The same network weights are used for all seven columns.
+### Experimental setup
 
-After processing, each column produces a `128`-dimensional feature vector.
+| Item | Value |
+|---|---|
+| Array / users / targets | M = 128 ULA, K = 4, T = 3, N_RF = 4 |
+| Carrier / Rayleigh distance | 100 GHz / 24.2 m |
+| Power / noise | P_tx = 1 W, σ² = 0.1 (nominal 10 dB SNR) |
+| Optimizer | AdamW, initial LR 7.5e-4, ReduceLROnPlateau (×0.5), grad-clip 5 |
+| Epochs run | 1200 (best validation epoch: 648) |
+| LR at end of run | 2.34e-5 (five halvings from 7.5e-4) |
+| Checkpoint | `models/Best_model_ISAC_128_L3.pt` |
+| Training script | `train_128_isac.py` |
 
-The seven feature vectors are then concatenated:
+### Headline results (held-out test set, best checkpoint)
 
-$$
-7\times128=896.
-$$
+| Metric | Value |
+|---|---|
+| Sum rate | **15.507 bps/Hz** |
+| Average sensing power | **0.246961** (per target, fraction of P_tx) |
+| Target 1 / 2 / 3 | 0.238539 / 0.256215 / 0.246129 |
+| Total power on the 3 targets | 0.7409 of P_tx |
+| Reference sum rate (logged as "MF baseline") | 30.343 bps/Hz |
+| Sum rate relative to reference | 51.1% (loss of 14.84 bps/Hz) |
 
-This `896`-dimensional vector is passed through the merge layer:
+### Validation and training (final epoch 1200)
 
-```text
-ComplexLinear(896 → 512)
-```
+| Quantity | Value |
+|---|---|
+| Total training loss | −0.1045 |
+| Communication loss E_c (training) | 0.1914 |
+| Sensing loss L_sen (training) | −0.2568 |
+| Training sum rate | 17.769 bps/Hz |
+| Validation sum rate | 15.310 bps/Hz (best 15.481 at epoch 648) |
+| Validation sensing power (avg) | 0.2530 (targets: 0.2514 / 0.2659 / 0.2417) |
+| Validation reference rate / percent | 30.318 bps/Hz / 50.5% |
+| Early-stopping counter | 552 (no improvement since epoch 648) |
 
-This is the main architecture change from Stage 1, where the merge layer was:
+The validation and test numbers differ by about 1 to 2% (15.31 vs 15.51 bps/Hz, 0.253 vs 0.247 W), which is ordinary sampling variation across the two 3000-sample splits.
 
-```text
-ComplexLinear(512 → 512)
-```
+### Training dynamics
 
-The output is then reshaped and converted into the constant-modulus RF precoder $\mathbf{F}_{\rm RF}$, as in Stage 1.
+![Total loss](Figure_1.png)
+![Sum rate](Figure_2.png)
+![Sensing loss](Figure_3.png)
+![Communication loss](Figure_4.png)
 
----
+Values below are read from the plots, so they are approximate.
 
-## 5. Loss Function
+1. **Epochs 0 to about 120, communication first.** E_c falls from about 1.17 to about 0.16 and the training sum rate climbs to about 18.8 bps/Hz. The sensing loss barely moves (about −0.008, which is the P_tx/M ≈ 0.0078 level expected for a random constant-modulus beam).
+2. **Epochs about 130 to 300, the trade-off appears.** L_sen drops steeply from about −0.02 to about −0.21. E_c rises to about 0.23 and the training sum rate falls to about 16.5 to 17 bps/Hz.
+3. **Epochs 300 to 1200, slow co-convergence.** L_sen settles at −0.257 and E_c at 0.191. The training sum rate plateaus at about 17.77 bps/Hz. The total loss goes from about 0.142 to −0.1045.
 
-Stage 2 has two objectives:
+### Beam patterns (one test sample)
 
-1. Communication performance
-2. Sensing performance
+![Transmit beam pattern](Figure_5.png)
+![Near-field 2-D beampattern](Figure_6.png)
 
-The total loss is
+- Three dominant lobes appear at about −56°, +35° and +49° (peaks at about −2.5, −1 and 0 dB). Most sidelobes sit between −20 and −30 dB.
+- The 2-D pattern over 2 to 24 m (inside the Rayleigh distance) shows **vertical stripes**. The learned beam is concentrated in angle and shows no visible range focusing in this window.
 
-$$
-\mathcal{L}
-=
-\lambda L_{\rm com}
-+
-(1-\lambda)L_{\rm sen}.
-$$
+### Analysis
 
-The communication loss is the same concentrated-MSE loss used in Stage 1.
+**Sensing gain.** A random constant-modulus beam delivers P_tx/M = 1/128 ≈ 0.0078 per target. The trained network reaches 0.247, which is **31.6× (about +15 dB)**.
 
-The sensing loss is added to encourage the transmit beamformer to send more power toward the selected sensing targets.
+**Upper bound.** For near-orthogonal targets, Σ_t ||b_tᴴ x||² ≤ λ_max(BBᴴ)·P_tx ≈ P_tx, so the per-target ceiling is about 1/T = 0.333. The network reaches **about 74%** of it. Per-target balance is good: max/min = 1.074 (0.3 dB).
 
----
+**Why the sum rate halves.** F_RF F_BB lies in an N_RF = 4 dimensional subspace that communication already needs in order to serve 4 users, while 3 targets compete for the same subspace. This degrees-of-freedom limit explains the drop, and it suggests N_RF > K should recover rate at the same sensing level.
 
-## 6. Communication Loss
+**Generalization gap.** The training sum rate (17.77) exceeds the validation sum rate (15.31) by 2.46 bps/Hz (13.8% of training). The sensing gap is only 1.5% (0.2568 vs 0.2530). Overfitting is therefore in the communication part. In the communication-only run (λ = 1) the training and validation curves coincide at about 30.3 bps/Hz.
 
-The communication loss $L_{\rm com}$ is unchanged from Stage 1.
+**Loss-to-rate sanity check.** Assuming equal per-user SINR with MSE = 1/(1+SINR): E_c = 0.1914 corresponds to about 17.5 bps/Hz (measured training rate 17.77), and the communication-only E_c ≈ 0.0227 corresponds to about 29.8 bps/Hz (measured about 30.3). The loss and the rate are consistent.
 
-The digital precoder $\mathbf{F}_{\rm BB}$ is still obtained using the KKT solution for the RF precoder produced by the neural network.
+### Assumptions and limitations
 
-Therefore,
+- Sensing is measured as one-way beampattern gain at known target positions. It is not detection probability, localization error or the Cramér-Rao bound.
+- F_BB is the communication-optimal precoder and is detached in the sensing term, so the gradient with respect to F_RF is approximate. The closed-form sensing term avoids this.
+- Normalization: L_sen/P_tx effectively spans [−1/T, 0], not [−1, 0], and E_c/K is small at high SINR, so the nominal λ = 0.5 is not an equal split in practice.
+- Only one λ was trained. The communication-sensing Pareto front is not yet measured.
+- Range focusing is not visible in the pattern above. In this data most users and targets lie beyond the Rayleigh distance, so the experiment weakly tests the near-field benefit.
 
-$$
-\mathbf{F}_{\rm BB}
-=
-\mathbf{F}_{\rm BB}
-(\mathbf{F}_{\rm RF},\mathbf{H}).
-$$
+### Next steps
 
-The communication part of the system is therefore handled in the same way as Stage 1.
-
----
-
-## 7. Sensing Loss
-
-The sensing part uses the effective transmit matrix
-
-$$
-\mathbf{TX}
-=
-\mathbf{F}_{\rm RF}
-\mathbf{F}_{\rm BB}.
-$$
-
-For target $\ell$, the received transmit power is calculated as
-
-$$
-\left\|
-\mathbf{b}_\ell^H
-\mathbf{TX}
-\right\|^2.
-$$
-
-The sensing loss is defined as
-
-$$
-L_{\rm sen}
-=
--\frac{1}{L}
-\sum_{\ell=1}^{L}
-\left\|
-\mathbf{b}_\ell^H
-\mathbf{TX}
-\right\|^2.
-$$
-
-The negative sign is used because the loss is minimized during training. Therefore, minimizing $L_{\rm sen}$ increases the power directed toward the sensing targets.
-
-There is no separate sensing-only data stream in this implementation. The sensing power comes from the same transmit beams that are used for communication.
-
----
-
-## 8. Digital Precoder During Sensing Training
-
-An important part of this stage is how the digital precoder is handled during the sensing loss calculation.
-
-The KKT solution still calculates the communication-optimal $\mathbf{F}*{\rm BB}$ for the current $\mathbf{F}*{\rm RF}$.
-
-However, the KKT calculation is performed inside:
-
-```python
-torch.no_grad()
-```
-
-Therefore, the sensing loss does not backpropagate through $\mathbf{F}_{\rm BB}$.
-
-The sensing gradient only updates the RF precoder:
-
-$$
-L_{\rm sen}
-\rightarrow
-\mathbf{F}_{\rm RF}
-\rightarrow
-\text{Neural Network}.
-$$
-
-The digital precoder continues to be used for communication and interference suppression.
-
-This means that the communication and sensing trade-off is handled mainly through the `N_RF = 4` RF precoder.
-
----
-
-## 9. Loss Normalization
-
-The communication and sensing losses have very different numerical values.
-
-The communication loss is roughly in the range:
-
-$$
-L_{\rm com}\approx1\text{ to }4
-$$
-
-while the sensing loss is much smaller.
-
-Therefore, directly using
-
-$$
-\lambda L_{\rm com}
-+
-(1-\lambda)L_{\rm sen}
-$$
-
-would give much more importance to the communication loss.
-
-To avoid this, both losses are normalized first:
-
-$$
-L_{\rm com}^{\rm norm}
-=
-\frac{L_{\rm com}}{K}
-$$
-
-and
-
-$$
-L_{\rm sen}^{\rm norm}
-=
-\frac{L_{\rm sen}}{-P_t}.
-$$
-
-The final loss is
-
-$$
-\mathcal{L}
-=
-\lambda L_{\rm com}^{\rm norm}
-+
-(1-\lambda)L_{\rm sen}^{\rm norm}.
-$$
-
-For this stage,
-
-$$
-\lambda=0.5.
-$$
-
-Therefore, communication and sensing are given equal weight.
-
-When $\lambda=1$, the system becomes the Stage 1 communication-only system. When $\lambda=0$, only the sensing objective is considered.
-
----
-
-## 10. Training
-
-The training setup is similar to Stage 1.
-
-The system uses:
-
-* Adam optimizer
-* Plateau-based learning-rate scheduling
-* Gradient clipping with maximum norm `5.0`
-* Maximum `1200` epochs
-
-The training is longer than Stage 1 because the network now has to optimize both communication and sensing objectives.
-
----
-
-## 11. Training Results
-
-### Communication Loss
-
-![Communication loss vs epoch](Outputs/ISAC Outputs/Figure_4.png)
-
-The normalized communication loss starts at approximately `1.17` and decreases to around `0.19–0.20`.
-
-There is a small increase around epochs `200–250`, which can be caused by the sensing objective affecting the communication objective during the early part of training.
-
-The final normalized communication loss corresponds to an overall communication MSE of approximately `0.8` after multiplying by `K = 4`.
-
-This is close to the communication MSE obtained in Stage 1.
-
-### Sensing Loss
-
-![Sensing loss vs epoch](Outputs/ISAC Outputs/Figure_3.png)
-
-The sensing loss decreases from approximately `0` to around `-0.26`.
-
-The loss becomes stable after roughly `800–1000` epochs.
-
-Since the sensing loss is negative, a lower value means that more transmit power is being directed toward the sensing targets.
-
-### Combined Loss
-
-![Combined training loss vs epoch](Outputs/ISAC Outputs/Figure_1.png)
-
-The combined loss decreases and reaches approximately `-0.105`.
-
-The negative value is expected because the normalized sensing loss is negative.
-
-The plot is currently labeled `"Concentrated MSE Loss"`, which was carried over from Stage 1. For Stage 2, this should be changed to something such as:
-
-```text
-Combined ISAC Loss
-```
-
-because the plotted quantity now contains both communication and sensing terms.
-
-### Sum Rate
-
-![Sum rate vs epoch](Outputs/ISAC Outputs/Figure_2.png)
-
-The training sum rate increases quickly to around `18.8 bps/Hz` and then settles around `17.7–17.8 bps/Hz`.
-
-The validation sum rate increases more slowly and reaches approximately:
-
-$$
-15.2-15.3\ \text{bps/Hz}.
-$$
-
-There is a persistent difference of around `2.5 bps/Hz` between training and validation performance.
-
-This should be investigated further before comparing the Stage 1 and Stage 2 results directly.
-
-In particular, the user range used in both stages should be checked. If the range of communication users is different between the two experiments, then the sum-rate values may not be directly comparable.
-
----
-
-## 12. Beam Patterns
-
-### 1-D Far-Field Beam Pattern
-
-![1-D far-field beam pattern cut](Outputs/ISAC Outputs/Figure_5.png)
-
-The first plot shows a 1-D angular cut of the transmit beam pattern.
-
-The four main peaks are approximately aligned with the user/target angles.
-
-However, this plot uses a far-field steering vector to examine a system that contains near-field users and targets.
-
-Therefore, it does not provide a complete picture of the near-field focusing behavior.
-
-The plot can be used as a basic check, but the 2-D range-angle pattern is more useful for this system.
-
-### 2-D Near-Field Beam Pattern
-
-![2-D near-field beampattern](Outputs/ISAC Outputs/Figure_6.png)
-
-The 2-D beam pattern shows transmit power as a function of both angle and range.
-
-This is more suitable for studying the near-field system because near-field beamforming depends on both angle and distance.
-
-The current result shows strong power around certain angles, but the power does not form clear peaks at the three target ranges:
-
-```text
-15 m
-25 m
-40 m
-```
-
-Instead, some of the patterns extend across a large part of the range axis.
-
-One possible reason is the current sensing loss. The sensing loss only rewards the power at the exact target locations:
-
-$$
-(\theta_\ell,r_\ell).
-$$
-
-It does not directly penalize power at other ranges.
-
-Therefore, the network has no direct reason to suppress power at nearby ranges.
-
-If range focusing is an important part of the sensing objective, a range-selectivity term should be added to the sensing loss. This could penalize power at incorrect ranges around the target.
-
----
-
-## 13. Stage 1 vs Stage 2
-
-|                           | Stage 1            | Stage 2 ($\lambda=0.5$) |
-| ------------------------- | ------------------ | ----------------------- |
-| Objective                 | Communication only | Communication + sensing |
-| Number of sensing targets | 0                  | 3                       |
-| Validation sum rate       | ~9.9 bps/Hz        | ~15.2–15.3 bps/Hz*      |
-| Communication MSE         | ~0.85              | ~0.8                    |
-| Train/validation gap      | Small              | ~2.5 bps/Hz             |
-
-*The Stage 1 and Stage 2 sum-rate values should not be directly compared until the user range used in both experiments has been confirmed.
-
----
-
-## 14. Current Issues to Check
-
-Before using these results in the final report or paper, the following points should be checked:
-
-1. Confirm that Stage 1 and Stage 2 use the same user range.
-2. Investigate the training and validation sum-rate difference in Stage 2.
-3. Check whether the sensing loss needs an additional range-selectivity term.
-4. Change the combined-loss plot label from `"Concentrated MSE Loss"` to `"Combined ISAC Loss"`.
-5. Replace the 1-D far-field beam pattern with a near-field-based plot, or use the 2-D range-angle pattern as the main beam-pattern result.
-
----
-
-## 15. Inference Time
-
-The inference-time comparison between the neural network and SOMP has not yet been completed for Stage 2.
-
-The current README only carries over the Stage 1 inference-time section.
-
-The measurement will be added after running the comparison for the Stage 2 network.
-
----
-
-## 16. Summary
-
-Stage 2 extends the communication-only beamforming system from Stage 1 to an ISAC system.
-
-The main changes are:
-
-* Three near-field sensing targets are added.
-* Target steering vectors are provided as additional network inputs.
-* The network processes four communication channels and three target vectors.
-* A sensing loss is added to the communication loss.
-* The KKT-based digital precoder is still used for communication.
-* The sensing gradient is applied only through the RF precoder.
-* Communication and sensing losses are normalized before combining them.
-* The current results show that communication performance remains around the Stage 1 level while also optimizing the sensing objective.
-* The current 2-D beam pattern shows angle focusing, but stronger range selectivity may require a modified sensing loss.
-
-This stage provides the communication-and-sensing base for further work on near-field ISAC beamforming.
+- Sweep λ ∈ {0, 0.1, …, 1} and plot sum rate vs sensing power (the Pareto front), including a fully-digital ISAC bound.
+- Re-run with N_RF = K + 2 to test the degrees-of-freedom explanation.
+- Evaluate with r_max reduced (or M = 256) to expose range focusing, and add a CRB-based sensing metric.
