@@ -194,6 +194,10 @@ The loss reaches a plateau at around `400` epochs.
 
 ### Sum Rate
 
+### Communication sum rate achieved using the NLoS multipath model
+
+![Communication sum rate achieved using the NLoS multipath model](Outputs/sum_rate_vs_epoch.png)
+
 ![Sum rate vs epoch](Outputs/sum_rate_vs_epoch_L1.png)
 
 The training and validation sum rates increase from approximately `2.3 bps/Hz` to around `10 bps/Hz`.
@@ -258,7 +262,7 @@ $$
 
 **Conclusion**
 
-These results demonstrate that the trained neural network can predict an effective analog RF precoder without requiring iterative SOMP execution for every channel realization, while achieving performance close to the best benchmark in terms of average sum rate.
+These results demonstrate that the trained neural network can predict an effective analog RF precoder without requiring iterative SOMP execution for every channel realization, while achieving per...
 
 ### Note
 
