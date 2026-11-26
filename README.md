@@ -205,8 +205,6 @@ The loss reaches a plateau at around `400` epochs.
 
 ### Sum Rate
 
-### Communication sum rate achieved using the NLoS multipath model
-
 ![Sum rate vs epoch](Outputs/sum_rate_vs_epoch_L1.png)
 
 The training and validation sum rates increase from approximately `2.3 bps/Hz` to around `10 bps/Hz`.
@@ -433,12 +431,12 @@ The validation and test numbers differ by about 1 to 2% (15.31 vs 15.51 bps/Hz, 
  
 ### Training dynamics
  
-![Total loss](Outputs/ISA_Outputs/Figure_1.png)
+![Total loss](Outputs/ISAC%20Outputs/Figure_1.png)
 ![Communication sum rate achieved](Outputs/sum_rate_vs_epoch.png)
-![Sum rate](Outputs/ISAC_Outputs/Figure_2.png)
-![Sensing loss](Outputs/ISAC_Outputs/Figure_3.png)
-![Communication loss](Outputs/ISAC_Outputs/Figure_4.png)
-![Target_Illumination](Outputs/ISAC_Outputs/Figure_6.png)
+![Sum rate](Outputs/ISAC%20Outputs/Figure_2.png)
+![Sensing loss](Outputs/ISAC%20Outputs/Figure_3.png)
+![Communication loss](Outputs/ISAC%20Outputs/Figure_4.png)
+![Target illumination](Outputs/ISAC%20Outputs/Figure_6.png)
 
  
 - Three dominant lobes appear at about −56°, +35° and +49° (peaks at about −2.5, −1 and 0 dB). Most sidelobes sit between −20 and −30 dB.
