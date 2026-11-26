@@ -61,10 +61,10 @@ The validation and test numbers differ by about 1 to 2% (15.31 vs 15.51 bps/Hz, 
 
 ### Training dynamics
 
-![Total loss](Figure_1.png)
-![Sum rate](Figure_2.png)
-![Sensing loss](Figure_3.png)
-![Communication loss](Figure_4.png)
+![Total loss](Outputs/ISAC_Outputs_with_NLoS_L3/Figure_1.png)
+![Sum rate](Outputs/ISAC_Outputs_with_NLoS_L3/Figure_2.png)
+![Sensing loss](Outputs/ISAC_Outputs_with_NLoS_L3/Figure_3.png)
+![Communication loss](Outputs/ISAC_Outputs_with_NLoS_L3/Figure_4.png)
 
 Values below are read from the plots, so they are approximate.
 
@@ -74,8 +74,8 @@ Values below are read from the plots, so they are approximate.
 
 ### Beam patterns (one test sample)
 
-![Transmit beam pattern](Figure_5.png)
-![Near-field 2-D beampattern](Figure_6.png)
+![Transmit beam pattern](Outputs/ISAC_Outputs_with_NLoS_L3/Figure_5.png)
+![Near-field 2-D beampattern](Outputs/ISAC_Outputs_with_NLoS_L3/Figure_6.png)
 
 - Three dominant lobes appear at about −56°, +35° and +49° (peaks at about −2.5, −1 and 0 dB). Most sidelobes sit between −20 and −30 dB.
 - The 2-D pattern over 2 to 24 m (inside the Rayleigh distance) shows **vertical stripes**. The learned beam is concentrated in angle and shows no visible range focusing in this window.
