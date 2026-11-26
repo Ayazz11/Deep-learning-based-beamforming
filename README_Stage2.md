@@ -61,7 +61,7 @@ The validation and test numbers differ by about 1 to 2% (15.31 vs 15.51 bps/Hz, 
 
 ### Training dynamics
 
-![Total loss](Outputs/ISAC_Outputs_with_NLoS_L3/Figure_1.png)
+![Total loss](Outputs/ISAC_Outputs/Figure_1.png)
 ![Sum rate](Outputs/ISAC_Outputs_with_NLoS_L3/Figure_2.png)
 ![Sensing loss](Outputs/ISAC_Outputs_with_NLoS_L3/Figure_3.png)
 ![Communication loss](Outputs/ISAC_Outputs_with_NLoS_L3/Figure_4.png)
