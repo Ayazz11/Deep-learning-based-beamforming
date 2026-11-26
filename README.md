@@ -46,7 +46,18 @@ The RF precoder has constant-modulus entries because it represents a phase-shift
 The total transmit power is limited to $P_t$.
 
 ---
+### Channel Model (LoS)
 
+The single-path line-of-sight model (`channel_model_los.py`) is used for the communication-only training script. The base station has an M-element ULA with half-wavelength spacing. Each of the K users has a single LoS path:
+
+    h_k = sqrt(M · (r_ref / r_k)^η) · e^{jφ_k} · b(θ_k, r_k)
+
+- **User position:** sin θ_k ~ U[−1, 1] and r_k ~ U[r_min, r_max], drawn independently per user.
+- **Phase:** φ_k ~ U[0, 2π) stands in for the unknown absolute propagation phase.
+- **Path loss:** (r_ref / r_k)^η with r_ref = 5 m and η = 2, so the large-scale gain goes from 1 at 5 m to 1/256 at 80 m, a spread of about 24 dB. Its expected value over uniform r is r_ref² / (r_min · r_max) = 1/16 (about −12 dB), so E‖h_k‖² = M/16.
+- **Steering vector:** b(θ, r) is the exact spherical-wave response, with entries e^{−j2π(r_m − r)/λ} / √M. Here r_m = √(r² + (δ_m d)² − 2 r δ_m d sin θ) is the true distance from element m, and δ_m = (2m − M + 1)/2 is its offset from the array center. It depends on both angle and range, so it captures wavefront curvature.
+- **Assumptions:** narrowband, uniform amplitude across the array (the path loss uses the center distance r, not each r_m), a single path with no scatterers or fading, isotropic elements, independent user positions, and perfect CSI.
+- **Near-field boundary:** the Rayleigh distance is 2D²/λ ≈ 24.2 m (M = 128, 100 GHz), so only part of the range [5, 80] m is in the near field.
 ## 2. Neural Network
 
 The neural network is called `MultiuserAnalogPrecoderNet`.
@@ -196,8 +207,6 @@ The loss reaches a plateau at around `400` epochs.
 
 ### Communication sum rate achieved using the NLoS multipath model
 
-![Communication sum rate achieved using the NLoS multipath model](Outputs/sum_rate_vs_epoch.png)
-
 ![Sum rate vs epoch](Outputs/sum_rate_vs_epoch_L1.png)
 
 The training and validation sum rates increase from approximately `2.3 bps/Hz` to around `10 bps/Hz`.
@@ -222,6 +231,9 @@ The following results are obtained by averaging over the test set.
 | **Neural Network $\mathbf{F}_{\mathrm{RF}}$ + KKT $\mathbf{F}_{\mathrm{BB}}$** | **9.9044** | **0.8469** |
 | Full Digital $\mathbf{F}_{\mathrm{RF}}$ + ZF $\mathbf{F}_{\mathrm{BB}}$ | 10.0851 | 0.8190 |
 | SOMP $\mathbf{F}_{\mathrm{RF}}$ | 8.2772 | 1.3294 |
+
+
+
 
 ### Key Observations
 
@@ -350,9 +362,96 @@ The main observations from Stage 1 are:
 ---
 
 ## 11. Next Stage
+## ISAC Extension: Joint Communication and Target Illumination
+ 
+The analog-precoder network is extended so that the same constant-modulus precoder serves K downlink users and illuminates T targets. No dedicated sensing beams or extra RF chains are used. Only the communication symbols are transmitted, and the analog precoder shapes where that energy goes.
+ ### Channel Model
 
-Stage 1 focuses only on multi-user communication.
+Users are modeled with a multipath near-field channel (`channel_model_1.py`). The base station has an M-element ULA with half-wavelength spacing. For each user *k*, the channel is a sum of L paths (L = 3 in the ISAC runs):
 
-The next stage can extend the system toward near-field ISAC by adding a sensing target and incorporating sensing-related objectives into the beamforming design.
+    h_k = sqrt(M / L) · Σ_{ℓ=1..L} α_ℓ · e^{-j2πr_ℓ/λ} · b(θ_ℓ, r_ℓ)
 
-The communication performance obtained in this stage will be used as the baseline for comparison with the later ISAC-based designs.
+- **Path parameters:** sin θ_ℓ ~ U[−1, 1], r_ℓ ~ U[r_min, r_max], and α_ℓ ~ CN(0, 1), all drawn independently.
+- **Steering vector:** b(θ, r) is the exact spherical-wave response, with entries e^{−j2π(r_m − r)/λ} / √M. Here r_m = √(r² + (δ_m d)² − 2 r δ_m d sin θ) is the true distance from element m, and δ_m = (2m − M + 1)/2 is its offset from the array center. This captures wavefront curvature, so the response depends on both angle and range.
+- **Normalization:** E‖h_k‖² = M. There is no distance-dependent path loss in this model.
+- **Assumptions:** narrowband, uniform amplitude across the array, no scatterer clustering, perfect CSI, and single-antenna users.
+- **Near-field boundary:** the Rayleigh distance is 2D²/λ ≈ 24.2 m (M = 128, 100 GHz), so only part of the user range is in the near field.
+### Method
+ 
+**Sensing model.** Targets are one-way receivers with unit-norm near-field steering vectors `B = [b(θ_t, r_t)] ∈ C^{M×T}` (`target_model.py`). The power at target *t* is `P_t = ||b_tᴴ F_RF F_BB||²`, which is a transmit-side quantity and does not include array gain, round-trip loss or RCS. `P_t` is expressed as a fraction of the transmit power (P_tx = 1 W).
+ 
+**Digital precoder.** `F_BB` stays the communication-optimal KKT closed form (`kkt_precoder.py`), so the digital stage needs no extra training.
+ 
+**Loss** (`loss.py::isac_loss`):
+ 
+```
+L = λ · E_c(F_RF) / K  +  (1 − λ) · L_sen / P_tx
+E_c(F_RF) = tr[(I + P_tx/(Kσ²) · Hᴴ F_RF (F_RFᴴ F_RF)⁻¹ F_RFᴴ H)⁻¹]      (concentrated MSE)
+L_sen     = −(1/T) · Σ_t ||b_tᴴ F_RF F_BB||²                            (F_BB detached)
+```
+ 
+The run reported below uses **λ = 0.5**. This follows from the logged values: 0.5·(0.1915/4) + 0.5·(−0.2567) = −0.1044.
+ 
+**Network change.** The target steering vectors are appended to the per-user inputs, so the shared complex MLP sees K+T = 7 columns. The merge layer input grows from 4·128 to 7·128. By my count this gives about 1.38 M real parameters (about 0.99 M for the communication-only model). The model constructor prints the exact figure.
+ 
+### Experimental setup
+ 
+| Item | Value |
+|---|---|
+| Array / users / targets | M = 128 ULA, K = 4, T = 3, N_RF = 4 |
+| Carrier / Rayleigh distance | 100 GHz / 24.2 m |
+| Power / noise | P_tx = 1 W, σ² = 0.1 (nominal 10 dB SNR) |
+| Optimizer | AdamW, initial LR 7.5e-4, ReduceLROnPlateau (×0.5), grad-clip 5 |
+| Epochs run | 1200 (best validation epoch: 648) |
+| LR at end of run | 2.34e-5 (five halvings from 7.5e-4) |
+ 
+### Headline results (held-out test set, best checkpoint)
+ 
+| Metric | Value |
+|---|---|
+| Sum rate | **15.507 bps/Hz** |
+| Average sensing power | **0.246961** (per target, fraction of P_tx) |
+| Target 1 / 2 / 3 | 0.238539 / 0.256215 / 0.246129 |
+| Total power on the 3 targets | 0.7409 of P_tx |
+| Reference sum rate (logged as "MF baseline") | 30.343 bps/Hz |
+| Sum rate relative to reference | 51.1% (loss of 14.84 bps/Hz) |
+ 
+### Validation and training (final epoch 1200)
+ 
+| Quantity | Value |
+|---|---|
+| Total training loss | −0.1045 |
+| Communication loss E_c (training) | 0.1914 |
+| Sensing loss L_sen (training) | −0.2568 |
+| Training sum rate | 17.769 bps/Hz |
+| Validation sum rate | 15.310 bps/Hz (best 15.481 at epoch 648) |
+| Validation sensing power (avg) | 0.2530 (targets: 0.2514 / 0.2659 / 0.2417) |
+| Validation reference rate / percent | 30.318 bps/Hz / 50.5% |
+| Early-stopping counter | 552 (no improvement since epoch 648) |
+ 
+The validation and test numbers differ by about 1 to 2% (15.31 vs 15.51 bps/Hz, 0.253 vs 0.247 W), which is ordinary sampling variation across the two 3000-sample splits.
+ 
+### Training dynamics
+ 
+![Total loss](Outputs/ISA_Outputs/Figure_1.png)
+![Communication sum rate achieved](Outputs/sum_rate_vs_epoch.png)
+![Sum rate](Outputs/ISAC_Outputs/Figure_2.png)
+![Sensing loss](Outputs/ISAC_Outputs/Figure_3.png)
+![Communication loss](Outputs/ISAC_Outputs/Figure_4.png)
+![Target_Illumination](Outputs/ISAC_Outputs/Figure_6.png)
+
+ 
+- Three dominant lobes appear at about −56°, +35° and +49° (peaks at about −2.5, −1 and 0 dB). Most sidelobes sit between −20 and −30 dB.
+- The 2-D pattern over 2 to 24 m (inside the Rayleigh distance) shows **vertical stripes**. The learned beam is concentrated in angle and shows no visible range focusing in this window.
+### Analysis
+ 
+**Sensing gain.** A random constant-modulus beam delivers P_tx/M = 1/128 ≈ 0.0078 per target. The trained network reaches 0.247, which is **31.6× (about +15 dB)**.
+ 
+**Upper bound.** For near-orthogonal targets, Σ_t ||b_tᴴ x||² ≤ λ_max(BBᴴ)·P_tx ≈ P_tx, so the per-target ceiling is about 1/T = 0.333. The network reaches **about 74%** of it. Per-target balance is good: max/min = 1.074 (0.3 dB).
+ 
+**Why the sum rate halves.** F_RF F_BB lies in an N_RF = 4 dimensional subspace that communication already needs in order to serve 4 users, while 3 targets compete for the same subspace. This degrees-of-freedom limit explains the drop, and it suggests N_RF > K should recover rate at the same sensing level.
+ 
+**Generalization gap.** The training sum rate (17.77) exceeds the validation sum rate (15.31) by 2.46 bps/Hz (13.8% of training). The sensing gap is only 1.5% (0.2568 vs 0.2530). Overfitting is therefore in the communication part. In the communication-only run (λ = 1) the training and validation curves coincide at about 30.3 bps/Hz.
+ 
+**Loss-to-rate sanity check.** Assuming equal per-user SINR with MSE = 1/(1+SINR): E_c = 0.1914 corresponds to about 17.5 bps/Hz (measured training rate 17.77), and the communication-only E_c ≈ 0.0227 corresponds to about 29.8 bps/Hz (measured about 30.3). The loss and the rate are consistent.
+
