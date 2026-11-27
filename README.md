@@ -292,8 +292,6 @@ The values below are read off the plots, so they are approximate.
 
 ### 7.6 Beam patterns (one test sample)
 
-![Transmit beam pattern](Outputs/ISAC%20Outputs/Figure_5.png)
-
 ![Near-field 2-D beampattern (target illumination)](Outputs/ISAC%20Outputs/Figure_6.png)
 
 - Three dominant lobes appear at about −56°, +35° and +49° (peaks at about −2.5, −1 and 0 dB). Most sidelobes sit between −20 and −30 dB.
